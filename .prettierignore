@@ -1,0 +1,7 @@
+node_modules
+dist
+.local
+test-results
+Images
+client/public
+package-lock.json
