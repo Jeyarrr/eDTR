@@ -12,3 +12,4 @@ playwright-report/
 Thumbs.db
 *.tsbuildinfo
 .vercel/
+.neon

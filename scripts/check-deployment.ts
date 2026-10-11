@@ -3,7 +3,8 @@ process.env.NODE_ENV = 'production';
 const { config } = await import('../server/config.js');
 const { pool } = await import('../server/db.js');
 try {
-  if (process.env.DATABASE_SSL !== 'true') throw new Error('Set DATABASE_SSL=true for Supabase.');
+  if (process.env.DATABASE_SSL !== 'true')
+    throw new Error('Set DATABASE_SSL=true for hosted PostgreSQL.');
   for (const key of ['SMTP_HOST', 'SMTP_FROM']) {
     if (!process.env[key]) throw new Error(`Set ${key} for invitation and recovery emails.`);
   }

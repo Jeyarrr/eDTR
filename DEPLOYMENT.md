@@ -1,5 +1,19 @@
 # Deploy VioTech eDTR to Vercel and Supabase
 
+## Neon PostgreSQL alternative
+
+Neon can replace Supabase for this application without changing the PostgreSQL driver or authentication system.
+
+1. Create a dedicated Neon project named `edtr`. Keep the default database name if desired.
+2. In the project's connection dialog, copy the pooled connection URI (hostname contains `-pooler`) into `DATABASE_URL` in your ignored `.env.production.local`.
+3. Copy the direct/unpooled connection URI into `DIRECT_DATABASE_URL` in that same file. Copy only the URI, not a `psql` command wrapping it.
+4. Set `DATABASE_SSL=true` and use the database owner role for setup and the API. The application verifies TLS certificates; a custom CA is normally unnecessary for Neon.
+5. Follow sections 2–4 below for the remaining environment variables, schema setup, administrator creation, Vercel configuration, and verification. For the current deployment, `APP_URL=https://edtr-indol.vercel.app`.
+
+The Supabase-specific ports and API-key instructions below do not apply to Neon. Use the exact connection URIs supplied by Neon. RLS remains enabled; the backend uses the table owner. Never run the setup against an unrelated application's database.
+
+Reference: [Neon PostgreSQL connection guide](https://neon.com/docs/get-started/connect-neon).
+
 ## Architecture
 
 - Vercel serves the React/Vite build from `dist` and forwards `/api/*` to `api/index.ts` (Express on Node.js 24).
