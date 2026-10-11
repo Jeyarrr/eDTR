@@ -4,9 +4,13 @@ A digital Daily Time Record system for **VioTech I.T. Solutions**, covering empl
 
 Built with the PERN stack: PostgreSQL 18, Express 5, React 19 with TypeScript, and Node.js. The interface follows the provided [Figma file](https://www.figma.com/design/yxsAkeMsJ3ISN71R1Sz2ix/Attendance-Tracking-System-Design?node-id=0-1), using the VioTech red, black, and white palette with sidebar, rounded panels, table layouts, and authentication layout. Transparent light/dark logos and the required navigation assets are served locally. Original logo source files are preserved in `Images/`.
 
+## Deployment
+
+See [DEPLOYMENT.md](DEPLOYMENT.md) for Vercel + Supabase setup, production environment variables, schema initialization, administrator creation, and live verification. Cloud credentials are not included.
+
 ## Run locally
 
-Requires Node.js 22.12+ and PostgreSQL. The current project uses the `edtr` database on the PostgreSQL 18 server at **127.0.0.1:5432**, alongside `tastenet` and `techora`, through `DATABASE_URL` in your local `.env`. On a fresh checkout, set that connection before setup. If `DATABASE_URL` is empty, development setup creates an isolated local cluster on **5433** instead.
+Requires Node.js 24.x and PostgreSQL. The current project uses the `edtr` database on the PostgreSQL 18 server at **127.0.0.1:5432**, alongside `tastenet` and `techora`, through `DATABASE_URL` in your local `.env`. On a fresh checkout, set that connection before setup. If `DATABASE_URL` is empty, development setup creates an isolated local cluster on **5433** instead.
 
 ```powershell
 npm install
@@ -98,7 +102,7 @@ Local debug administrator: sign in with username `admin` and password `admin`. T
 
 The interface uses transparent VioTech logo assets, bold italic headings inspired by its lettering, hover states, and gentle logo/sidebar/button pulses. System reduced-motion preferences disable animations. Login, recovery, and shared employee/management screens use VioTech branding.
 
-Clock-in requires a camera photo or JPG/PNG upload (5 MB maximum). The server decodes the image, removes metadata, resizes it, and stores it in PostgreSQL with the attendance record. Employees can view their own proof; Admin/HR can review it in daily record details. Historical attendance without a photo remains available. Camera access requires localhost or HTTPS and browser permission; upload works when a camera is unavailable.
+Clock-in requires a camera photo or JPG/PNG upload (3 MB maximum). The server decodes the image, removes metadata, resizes it, and stores it in PostgreSQL with the attendance record. Employees can view their own proof; Admin/HR can review it in daily record details. Historical attendance without a photo remains available. Camera access requires localhost or HTTPS and browser permission; upload works when a camera is unavailable.
 
 Click the account name to open Profile, Settings, or Logout. Appearance settings switch light/dark mode.
 

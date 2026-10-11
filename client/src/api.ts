@@ -12,7 +12,13 @@ export async function api<T = any>(path: string, options: RequestInit = {}): Pro
       ...options.headers,
     },
   });
-  const data = await response.json();
+  const data = await response.json().catch(() => null);
+  if (!data)
+    throw new Error(
+      response.status === 413
+        ? 'Photo is too large. Choose a JPG or PNG no larger than 3 MB.'
+        : 'The server is unavailable. Please try again shortly.',
+    );
   if (!response.ok) throw new Error(data.error || 'Request failed.');
   return data;
 }

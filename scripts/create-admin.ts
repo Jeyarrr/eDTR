@@ -1,7 +1,9 @@
 import { randomUUID } from 'node:crypto';
 import bcrypt from 'bcryptjs';
 import { z } from 'zod';
-import { pool, migrate, transaction } from '../server/db.js';
+import 'dotenv/config';
+if (process.env.DIRECT_DATABASE_URL) process.env.DATABASE_URL = process.env.DIRECT_DATABASE_URL;
+const { pool, migrate, transaction } = await import('../server/db.js');
 import { audit } from '../server/service.js';
 const input = z
   .object({

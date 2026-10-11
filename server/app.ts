@@ -29,6 +29,7 @@ import {
   recalculateAdjustment,
 } from './service.js';
 import { sendAccountMail } from './mail.js';
+import { PostgresRateLimitStore } from './rate-limit-store.js';
 declare global {
   namespace Express {
     interface Request {
@@ -54,7 +55,7 @@ app.use(
     },
   }),
 );
-app.use('/api/attendance/clock-in', express.json({ limit: '8mb' }));
+app.use('/api/attendance/clock-in', express.json({ limit: '4300kb' }));
 app.use(express.json({ limit: '64kb' }));
 app.use(cookieParser());
 const sessionHash = (token: string) =>
@@ -62,6 +63,7 @@ const sessionHash = (token: string) =>
     .update(token)
     .digest('hex');
 const authLimiter = rateLimit({
+  store: config.production ? new PostgresRateLimitStore(pool) : undefined,
   windowMs: 15 * 60 * 1000,
   limit: 35,
   standardHeaders: 'draft-8',
@@ -129,12 +131,9 @@ app.use('/api', async (req, res, next) => {
     if (origin && !origins.includes(origin))
       return res.status(403).json({ error: 'Request origin is not allowed.' });
     if (req.user) {
-      const supplied = req.get('x-csrf-token') || '';
-      const expected = req.session.csrf_token;
-      if (
-        supplied.length !== expected.length ||
-        !timingSafeEqual(Buffer.from(supplied), Buffer.from(expected))
-      )
+      const supplied = Buffer.from(req.get('x-csrf-token') || '');
+      const expected = Buffer.from(req.session.csrf_token);
+      if (supplied.length !== expected.length || !timingSafeEqual(supplied, expected))
         return res.status(403).json({ error: 'Refresh your session before making changes.' });
     }
   }
@@ -370,11 +369,11 @@ app.get('/api/dashboard', async (req, res) => {
   });
 });
 app.post('/api/attendance/clock-in', async (req, res) => {
-  const { proof } = z.object({ proof: z.string().max(7500000) }).parse(req.body);
+  const { proof } = z.object({ proof: z.string().max(4200000) }).parse(req.body);
   const match = /^data:image\/(jpeg|png);base64,([A-Za-z0-9+/]+={0,2})$/.exec(proof);
   if (!match) throw new AppError(422, 'Upload a JPG or PNG photo for clock-in proof.');
   const bytes = Buffer.from(match[2], 'base64');
-  if (bytes.length > 5 * 1024 * 1024) throw new AppError(422, 'Photo must be 5 MB or smaller.');
+  if (bytes.length > 3 * 1024 * 1024) throw new AppError(422, 'Photo must be 3 MB or smaller.');
   let image: Buffer;
   try {
     const input = sharp(bytes, { limitInputPixels: 25000000 });
@@ -1076,11 +1075,17 @@ app.get('/api/payroll/:id/payslip', async (req, res) => {
   doc.end();
 });
 app.use('/api', (_req, _res, next) => next(new AppError(404, 'API route not found.')));
-if (existsSync(resolve('dist/index.html'))) {
+if (!process.env.VERCEL && existsSync(resolve('dist/index.html'))) {
   app.use(express.static(resolve('dist')));
   app.get('/{*path}', (_req, res) => res.sendFile(resolve('dist/index.html')));
 }
 app.use((error: any, _req: Request, res: Response, _next: NextFunction) => {
+  if (error.type === 'entity.too.large')
+    return res
+      .status(413)
+      .json({ error: 'Request too large. Upload a photo no larger than 3 MB.' });
+  if (error.type === 'entity.parse.failed')
+    return res.status(400).json({ error: 'Request body must contain valid JSON.' });
   if (error instanceof z.ZodError)
     return res.status(422).json({
       error: error.issues[0]?.message || 'Check your input.',

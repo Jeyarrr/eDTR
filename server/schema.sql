@@ -91,3 +91,25 @@ CREATE TABLE IF NOT EXISTS audit_logs (
 );
 CREATE INDEX IF NOT EXISTS attendance_date_idx ON attendance(work_date);
 CREATE INDEX IF NOT EXISTS audit_time_idx ON audit_logs(created_at DESC);
+
+CREATE TABLE IF NOT EXISTS auth_rate_limits (
+ key text PRIMARY KEY, hits integer NOT NULL, reset_at timestamptz NOT NULL
+);
+CREATE INDEX IF NOT EXISTS auth_rate_limits_expiry ON auth_rate_limits(reset_at);
+-- All browser access goes through the role-scoped Express API.
+-- Backend connects as the table owner (Supabase postgres), which bypasses RLS.
+ALTER TABLE schedules ENABLE ROW LEVEL SECURITY;
+ALTER TABLE users ENABLE ROW LEVEL SECURITY;
+ALTER TABLE schedule_assignments ENABLE ROW LEVEL SECURITY;
+ALTER TABLE employment_periods ENABLE ROW LEVEL SECURITY;
+ALTER TABLE sessions ENABLE ROW LEVEL SECURITY;
+ALTER TABLE recovery_tokens ENABLE ROW LEVEL SECURITY;
+ALTER TABLE attendance ENABLE ROW LEVEL SECURITY;
+ALTER TABLE attendance_proofs ENABLE ROW LEVEL SECURITY;
+ALTER TABLE leaves ENABLE ROW LEVEL SECURITY;
+ALTER TABLE holidays ENABLE ROW LEVEL SECURITY;
+ALTER TABLE corrections ENABLE ROW LEVEL SECURITY;
+ALTER TABLE payroll_policy ENABLE ROW LEVEL SECURITY;
+ALTER TABLE payroll ENABLE ROW LEVEL SECURITY;
+ALTER TABLE audit_logs ENABLE ROW LEVEL SECURITY;
+ALTER TABLE auth_rate_limits ENABLE ROW LEVEL SECURITY;

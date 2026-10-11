@@ -53,7 +53,7 @@ export function ClockProof({
   return (
     <Modal title="Clock-in photo proof" onClose={busy ? () => {} : onClose}>
       <p>
-        Take a photo or upload a JPG/PNG, up to 5 MB. HR can review it with your attendance record.
+        Take a photo or upload a JPG/PNG, up to 3 MB. HR can review it with your attendance record.
       </p>
       <div className="proof-options">
         <button className="button secondary" onClick={startCamera} disabled={busy}>
@@ -72,8 +72,8 @@ export function ClockProof({
               setError('');
               setPhoto('');
               stop();
-              if (!['image/jpeg', 'image/png'].includes(file.type) || file.size > 5 * 1024 * 1024) {
-                setError('Choose a JPG or PNG no larger than 5 MB.');
+              if (!['image/jpeg', 'image/png'].includes(file.type) || file.size > 3 * 1024 * 1024) {
+                setError('Choose a JPG or PNG no larger than 3 MB.');
                 return;
               }
               const reader = new FileReader();

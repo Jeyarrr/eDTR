@@ -6,6 +6,7 @@ import bcrypt from 'bcryptjs';
 import pg from 'pg';
 import sharp from 'sharp';
 import { ensureDemoAccounts, demoAccounts } from '../scripts/demo-accounts.js';
+import { PostgresRateLimitStore } from '../server/rate-limit-store.js';
 const proof =
   'data:image/png;base64,' +
   (
@@ -558,4 +559,48 @@ test('sample accounts can be added to an existing database and reseeded without 
     (await pool.query('SELECT count(*) FROM attendance')).rows[0].count,
     attendanceBefore,
   );
+});
+
+test('login rate limit counters are shared atomically across instances and reset after expiry', async () => {
+  const first = new PostgresRateLimitStore(pool),
+    second = new PostgresRateLimitStore(pool);
+  const key = randomUUID();
+  const results = await Promise.all(
+    Array.from({ length: 12 }, (_, i) => (i % 2 ? first : second).increment(key)),
+  );
+  assert.deepEqual(
+    results.map((r) => r.totalHits).sort((a, b) => a - b),
+    Array.from({ length: 12 }, (_, i) => i + 1),
+  );
+  await pool.query("UPDATE auth_rate_limits SET reset_at=now()-interval '1 second'");
+  assert.equal((await second.increment(key)).totalHits, 1);
+  await first.resetKey(key);
+  assert.equal((await second.increment(key)).totalHits, 1);
+});
+
+test('application tables deny direct browser-role access through RLS', async () => {
+  const result = await pool.query(
+    "SELECT relname,relrowsecurity FROM pg_class JOIN pg_namespace n ON n.oid=relnamespace WHERE n.nspname=$1 AND relkind='r'",
+    [schema],
+  );
+  assert.ok(result.rows.length >= 15);
+  assert.ok(result.rows.every((r) => r.relrowsecurity));
+  assert.equal(
+    (await pool.query('SELECT count(*) FROM pg_policies WHERE schemaname=$1', [schema])).rows[0]
+      .count,
+    '0',
+  );
+});
+
+test('invalid JSON and oversized requests return actionable client errors', async () => {
+  await request(app)
+    .post('/api/auth/login')
+    .set('Content-Type', 'application/json')
+    .send('{')
+    .expect(400);
+  await employeeAgent
+    .post('/api/attendance/clock-in')
+    .set('X-CSRF-Token', employeeCsrf)
+    .send({ proof: 'x'.repeat(4500000) })
+    .expect(413);
 });
