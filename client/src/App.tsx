@@ -381,7 +381,7 @@ function AuthPage({
   const navigate = useNavigate();
   const token = new URLSearchParams(useLocation().search).get('token');
   return (
-    <div className={`auth-page ${mode !== 'login' ? 'recovery-page' : ''}`}>
+    <div className={`auth-page ${mode === 'login' ? 'login-page' : 'recovery-page'}`}>
       <div className="auth-top">
         <ThemeButton />
       </div>

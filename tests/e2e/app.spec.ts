@@ -7,6 +7,76 @@ async function login(page: any, email = 'admin', password = 'admin') {
   await expect(page).toHaveURL(/\/$/);
   await expect(page.getByRole('heading', { name: /^Welcome back,/ })).toBeVisible();
 }
+test('login fits the viewport without scrolling or overlapping controls', async ({ page }) => {
+  await page.emulateMedia({ reducedMotion: 'reduce' });
+  await page.goto('/login');
+  await page.getByRole('button', { name: 'Sign in', exact: true }).waitFor();
+  await page.evaluate(() => document.fonts.ready);
+  for (const [width, height] of [
+    [1920, 1080],
+    [1366, 768],
+    [1280, 600],
+    [768, 1024],
+    [390, 844],
+    [375, 667],
+    [320, 568],
+    [844, 390],
+    [568, 320],
+  ]) {
+    await page.setViewportSize({ width, height });
+    const layout = await page.evaluate(() => {
+      const boxes = ['.auth-top', '.auth-card', '.auth-logo-frame', '.auth-copyright'].map(
+        (selector) => {
+          const r = document.querySelector(selector)!.getBoundingClientRect();
+          return { x: r.x, y: r.y, right: r.right, bottom: r.bottom };
+        },
+      );
+      return {
+        width: document.documentElement.scrollWidth,
+        height: document.documentElement.scrollHeight,
+        brandCenter: (() => {
+          const r = document.querySelector('.auth-brand-panel')!.getBoundingClientRect();
+          return r.x + r.width / 2;
+        })(),
+        boxes,
+        overlap: boxes.some((a, i) =>
+          boxes
+            .slice(i + 1)
+            .some(
+              (b) =>
+                Math.min(a.right, b.right) - Math.max(a.x, b.x) > 1 &&
+                Math.min(a.bottom, b.bottom) - Math.max(a.y, b.y) > 1,
+            ),
+        ),
+      };
+    });
+    expect(layout.width, `${width}x${height} horizontal overflow`).toBeLessThanOrEqual(width);
+    expect(layout.height, `${width}x${height} vertical overflow`).toBeLessThanOrEqual(height);
+    expect(layout.overlap, `${width}x${height} overlapping controls`).toBe(false);
+    if (width >= 1280 && height >= 700) {
+      const card = layout.boxes[1];
+      const logo = layout.boxes[2];
+      expect(Math.abs(logo.x + (logo.right - logo.x) / 2 - layout.brandCenter)).toBeLessThan(2);
+      expect(card.right - card.x).toBeGreaterThanOrEqual(440);
+      expect(card.bottom - card.y).toBeGreaterThanOrEqual(500);
+    }
+    for (const box of layout.boxes) {
+      expect(box.x).toBeGreaterThanOrEqual(0);
+      expect(box.y).toBeGreaterThanOrEqual(0);
+      expect(box.right).toBeLessThanOrEqual(width);
+      expect(box.bottom).toBeLessThanOrEqual(height);
+    }
+  }
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.route('**/api/auth/login', (route) =>
+    route.fulfill({ status: 401, json: { error: 'Incorrect username or password.' } }),
+  );
+  await page.getByLabel('Username or work email').fill('missing');
+  await page.getByLabel('Password', { exact: true }).fill('incorrect');
+  await page.getByRole('button', { name: 'Sign in', exact: true }).click();
+  await expect(page.getByRole('alert')).toContainText('Incorrect username or password.');
+  expect(await page.evaluate(() => document.documentElement.scrollHeight)).toBeLessThanOrEqual(844);
+});
 test('management screens, Figma assets, dialogs and dark mode', async ({ page }) => {
   const errors: string[] = [];
   page.on('pageerror', (error) => errors.push(error.message));

@@ -6,7 +6,7 @@ Built with the PERN stack: PostgreSQL 18, Express 5, React 19 with TypeScript, a
 
 ## Deployment
 
-See [DEPLOYMENT.md](DEPLOYMENT.md) for Vercel + Supabase setup, production environment variables, schema initialization, administrator creation, and live verification. Cloud credentials are not included.
+See [DEPLOYMENT.md](DEPLOYMENT.md) for Vercel with Neon PostgreSQL or Supabase, production environment variables, schema initialization, administrator creation, and live verification. Cloud credentials are not included.
 
 ## Run locally
 
@@ -21,17 +21,25 @@ npm run dev
 
 Open **http://127.0.0.1:5173**. The API runs on **http://127.0.0.1:3001**. Demo seeding is explicit and repeatable: an empty database gets fictional history and sample accounts; an existing database gets only missing sample accounts. Existing passwords, account status, attendance, and payroll are preserved. Demo employees and historical attendance are fictional. Dashboard, DTR, and payroll totals are calculated from database records.
 
+Use `npm run dev` to start both the UI and API. To run them in separate terminals, use `npm run server` (alias for `npm run dev:server`) for the API and `npm run dev:client` for the UI.
+
 Keep the development terminal open. Stop the app with **Ctrl+C**; if Windows asks `Terminate batch job (Y/N)?`, enter **Y**. In PowerShell you can use `npm.cmd run dev` if script execution policy blocks `npm`.
 
 The launcher checks both ports before setting up the database. Starting it again while eDTR is running prints the existing app URL. If another service owns a required port, stop that service in its terminal and retry. The launcher shuts down its API and frontend together when either process exits. To choose different ports, set `PORT` (API) and `VITE_PORT` (frontend) in `.env`; set `APP_URL` to the frontend URL when overriding the public address used in email links.
 
-| Account       | Username / email | Password |
-| ------------- | ---------------- | -------- |
-| Administrator | admin            | admin    |
-| HR            | HRAlex           | hralex   |
-| Employee      | raymondsantiago  | Raymond  |
-| Employee      | georgeanthony    | George   |
-| Employee      | syrentortal      | Syren    |
+## Sample user accounts
+
+Open **http://127.0.0.1:5173/login** and enter a username or email below. Passwords are case-sensitive.
+
+| Role          | Username          | Email                | Password  |
+| ------------- | ----------------- | -------------------- | --------- |
+| Administrator | `admin`           | `admin@edtr.local`   | `admin`   |
+| HR            | `HRAlex`          | `hr@edtr.local`      | `hralex`  |
+| Employee      | `raymondsantiago` | `raymond@edtr.local` | `Raymond` |
+| Employee      | `georgeanthony`   | `george@edtr.local`  | `George`  |
+| Employee      | `syrentortal`     | `syren@edtr.local`   | `Syren`   |
+
+If these sample accounts are missing from your local database, run `npm run db:seed`. It adds missing accounts without resetting existing passwords. These are demo credentials; an account whose password was changed uses its updated password.
 
 To use another PostgreSQL instance, copy `.env.example` to `.env` and set `DATABASE_URL`. `POSTGRES_BIN` and `LOCAL_POSTGRES_PORT` customize local bootstrap. The bootstrap can also use PostgreSQL binaries on PATH on Linux/macOS, running as a non-root user.
 
@@ -109,6 +117,7 @@ Click the account name to open Profile, Settings, or Logout. Appearance settings
 ## Local configuration and maintenance
 
 - `.env`, `.env.*`, `.local/`, generated builds, test output, dependencies, and logs are ignored by Git. `.env.example` contains placeholders and is safe to commit.
+- Neon configuration is development tooling. The running application connects through `pg`; it does not require `@neon/env`. The build also checks for unused TypeScript locals and parameters.
 - `npm run db:setup` applies the schema without clearing records.
 - `npm run db:seed` adds missing sample accounts; it never resets existing passwords. Credentials in the table are the defaults for newly created demo accounts.
 - Use Profile > Settings for appearance and the account menu for Logout.
