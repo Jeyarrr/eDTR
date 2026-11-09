@@ -2,7 +2,7 @@
 
 A digital Daily Time Record system for **VioTech I.T. Solutions**, covering employee timekeeping, photo proof, attendance management, and payroll.
 
-Built with the PERN stack: PostgreSQL 18, Express 5, React 19 with TypeScript, and Node.js. The interface follows the provided [Figma file](https://www.figma.com/design/yxsAkeMsJ3ISN71R1Sz2ix/Attendance-Tracking-System-Design?node-id=0-1), using the VioTech red, black, and white palette with sidebar, rounded panels, table layouts, and authentication layout. Transparent light/dark logos and the required navigation assets are served locally. Original logo source files are preserved in `Images/`.
+Built with the PERN stack: PostgreSQL 18, Express 5, React 19 with TypeScript, and Node.js. The interface shares the [VioTechPM](https://github.com/Jeyarrr/ViotechPM) company styling: Inter Variable typography, crimson and black surfaces, a split login layout, compact navigation, and consistent cards, tables, forms, and dialogs. Dark mode is the default for new browsers; saved light/dark preferences are preserved. Transparent company logos are served locally, with original logo source files preserved in `Images/`.
 
 ## Deployment
 
@@ -108,7 +108,7 @@ The Figma sample exposed clock controls on admin rows, treated Late as an exclus
 
 Local debug administrator: sign in with username `admin` and password `admin`. The username shortcut is available only in development.
 
-The interface uses transparent VioTech logo assets, bold italic headings inspired by its lettering, hover states, and gentle logo/sidebar/button pulses. System reduced-motion preferences disable animations. Login, recovery, and shared employee/management screens use VioTech branding.
+The company styling is maintained in `client/src/company-theme.css`; existing eDTR screen layouts remain in `client/src/styles.css`. Login, recovery, and employee/management screens share VioTech branding. A successful login unfolds into the workspace on supported browsers; reduced-motion preferences and browsers without View Transition support use immediate navigation. Failed logins remain on the form.
 
 Clock-in requires a camera photo or JPG/PNG upload (3 MB maximum). The server decodes the image, removes metadata, resizes it, and stores it in PostgreSQL with the attendance record. Employees can view their own proof; Admin/HR can review it in daily record details. Historical attendance without a photo remains available. Camera access requires localhost or HTTPS and browser permission; upload works when a camera is unavailable.
 

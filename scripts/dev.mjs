@@ -85,7 +85,7 @@ async function main() {
   const setup = launch(['--import', 'tsx', 'scripts/setup.ts']);
   const setupCode = await new Promise((resolve) => setup.once('exit', resolve));
   if (setupCode !== 0) return stop(1);
-  const server = launch(['--import', 'tsx', '--watch', 'server/index.ts']);
+  const server = launch(['node_modules/tsx/dist/cli.mjs', 'watch', 'server/index.ts']);
   server.once('exit', (code) => stop(code ?? 1));
   let ready = false;
   for (let attempt = 0; attempt < 50; attempt++) {

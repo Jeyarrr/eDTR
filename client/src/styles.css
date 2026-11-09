@@ -1621,51 +1621,6 @@ textarea {
   width: 36px;
   height: 36px;
 }
-.auth-brand-panel {
-  max-width: 560px;
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-}
-.auth-logo-frame {
-  width: 228px;
-  height: 228px;
-  margin-bottom: 23px;
-}
-.auth-logo-frame .brand-logo {
-  width: 100%;
-  height: 100%;
-  mix-blend-mode: multiply;
-}
-[data-theme='dark'] .auth-logo-frame {
-  background: #000;
-  border-radius: 15px;
-  overflow: hidden;
-}
-[data-theme='dark'] .auth-logo-frame .brand-logo {
-  mix-blend-mode: normal;
-}
-.auth-brand-panel h1 {
-  font-size: 39px;
-  line-height: 1.25;
-  letter-spacing: -1.6px;
-  margin: 3px 0 17px;
-}
-.auth-brand-panel > p {
-  color: var(--muted);
-  font-size: 13px;
-}
-.auth-brand-footer {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  font-size: 10px;
-  color: var(--muted);
-  margin-top: 34px;
-}
-.auth-brand-footer svg {
-  color: var(--brand);
-}
 .auth-card {
   width: 100%;
   max-width: 440px;
@@ -1718,26 +1673,6 @@ textarea {
   width: 100%;
   height: 47px;
 }
-.invitation-note {
-  display: flex;
-  gap: 10px;
-  align-items: flex-start;
-  border-top: 1px solid var(--line);
-  padding-top: 22px;
-  margin-top: 24px;
-  color: var(--muted);
-}
-.invitation-note svg {
-  flex-shrink: 0;
-  margin-top: 3px;
-  color: var(--brand);
-}
-.invitation-note p {
-  font-weight: 600;
-}
-.invitation-note span {
-  font-weight: 400;
-}
 .auth-copyright {
   position: absolute;
   bottom: 26px;
@@ -1748,29 +1683,71 @@ textarea {
   color: var(--muted);
 }
 /* Keep login controls in the viewport, with header and footer in the layout. */
-.login-page {
-  height: 100dvh;
-  min-height: 0;
-  grid-template-rows: auto minmax(0, 1fr) auto;
-  gap: clamp(8px, 2dvh, 24px) 7vw;
-  padding: clamp(12px, 3dvh, 32px) max(5vw, 20px);
+/* The two login panels open away from the center after authentication succeeds. */
+:root[data-login-transition='unfold'] {
+  view-transition-name: none;
 }
-.login-page .auth-top {
-  position: static;
-  grid-column: 1 / -1;
+:root[data-login-transition='unfold'] .login-page .auth-brand-panel {
+  view-transition-name: login-brand;
 }
-.login-page .auth-brand-panel,
-.login-page .auth-card {
-  min-width: 0;
+:root[data-login-transition='unfold'] .login-page .auth-card {
+  view-transition-name: login-card;
 }
-.login-page .auth-logo-frame {
-  width: clamp(96px, 24dvh, 228px);
-  height: clamp(96px, 24dvh, 228px);
-  margin-bottom: clamp(10px, 2dvh, 23px);
+:root[data-login-transition='unfold']::view-transition-group(*) {
+  animation: none;
 }
-.login-page .auth-copyright {
-  position: static;
-  grid-column: 1 / -1;
+:root[data-login-transition='unfold'] .app-shell {
+  animation: login-workspace-in 760ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+:root[data-login-transition='unfold']::view-transition-old(login-brand),
+:root[data-login-transition='unfold']::view-transition-old(login-card) {
+  backface-visibility: hidden;
+  animation-duration: 760ms;
+  animation-timing-function: cubic-bezier(0.65, 0, 0.2, 1);
+  animation-fill-mode: both;
+}
+:root[data-login-transition='unfold']::view-transition-old(login-brand) {
+  transform-origin: left center;
+  animation-name: login-unfold-left;
+}
+:root[data-login-transition='unfold']::view-transition-old(login-card) {
+  transform-origin: right center;
+  animation-name: login-unfold-right;
+}
+@keyframes login-workspace-in {
+  from {
+    opacity: 0;
+    transform: scale(0.97);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+@keyframes login-unfold-left {
+  55% {
+    opacity: 1;
+  }
+  to {
+    opacity: 0;
+    transform: perspective(1400px) translateX(-12%) rotateY(-100deg);
+  }
+}
+@keyframes login-unfold-right {
+  55% {
+    opacity: 1;
+  }
+  to {
+    opacity: 0;
+    transform: perspective(1400px) translateX(12%) rotateY(100deg);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  :root[data-login-transition='unfold']::view-transition-group(*),
+  :root[data-login-transition='unfold']::view-transition-old(*),
+  :root[data-login-transition='unfold']::view-transition-new(*) {
+    animation: none;
+  }
 }
 .recovery-page {
   display: flex;
@@ -1951,15 +1928,8 @@ textarea {
     gap: 30px;
     padding-inline: 5vw;
   }
-  .auth-brand-panel h1 {
-    font-size: 31px;
-  }
   .auth-card {
     padding: 32px;
-  }
-  .auth-logo-frame {
-    width: 200px;
-    height: 200px;
   }
   .topbar-right {
     gap: 13px;
@@ -2239,21 +2209,6 @@ textarea {
     padding: 100px 20px 70px;
     justify-content: center;
   }
-  .auth-brand-panel {
-    align-items: center;
-    text-align: center;
-  }
-  .auth-logo-frame {
-    width: 135px;
-    height: 135px;
-    margin-bottom: 0;
-  }
-  .auth-brand-panel h1,
-  .auth-brand-panel > p,
-  .auth-brand-footer,
-  .auth-brand-panel > .eyebrow {
-    display: none;
-  }
   .auth-card {
     padding: 27px;
     max-width: 430px;
@@ -2385,12 +2340,6 @@ textarea {
 }
 .forgot-link {
   font-size: 12px;
-}
-.invitation-note p {
-  font-size: 12px;
-}
-.invitation-note span {
-  font-size: 11px;
 }
 .filter-field input,
 .filter-field select {
@@ -2570,12 +2519,6 @@ h3,
   font-weight: 900;
   letter-spacing: -0.6px;
 }
-.auth-logo-frame,
-[data-theme='dark'] .auth-logo-frame {
-  background: transparent;
-  border: 0;
-  box-shadow: none;
-}
 .brand-logo {
   animation: brand-pulse 4s ease-in-out infinite;
 }
@@ -2751,10 +2694,6 @@ button:focus-visible svg.lucide-x {
 .auth-top {
   justify-content: flex-end;
 }
-.auth-logo-frame {
-  margin-left: auto;
-  margin-right: auto;
-}
 .auth-card {
   position: relative;
 }
@@ -2800,138 +2739,4 @@ button:focus-visible svg.lucide-x {
   font-size: 9px;
   color: var(--muted);
   margin-top: 8px;
-}
-
-@media (max-width: 700px) {
-  .login-page {
-    display: grid;
-    grid-template-columns: minmax(0, 1fr);
-    grid-template-rows: auto auto minmax(0, 1fr) auto;
-    justify-items: center;
-    padding: clamp(10px, 2dvh, 20px) 20px;
-    gap: clamp(6px, 1.5dvh, 14px);
-  }
-  .login-page .auth-top {
-    width: 100%;
-  }
-  .login-page .auth-logo-frame {
-    width: clamp(64px, 12dvh, 110px);
-    height: clamp(64px, 12dvh, 110px);
-    margin-bottom: 0;
-  }
-}
-@media (max-height: 640px), (max-width: 700px) and (max-height: 760px) {
-  .login-page .auth-card {
-    padding: 20px 24px;
-  }
-  .login-page .auth-card > .eyebrow {
-    margin-bottom: 6px;
-  }
-  .login-page .auth-card h1 {
-    font-size: 25px;
-  }
-  .login-page .auth-card > p {
-    margin: 8px 0 16px;
-  }
-  .login-page .auth-card .field {
-    margin-bottom: 12px;
-  }
-  .login-page .auth-card input,
-  .login-page .auth-card .form-actions .button {
-    height: 40px;
-  }
-  .login-page .password-field .icon-button {
-    top: 4px;
-  }
-  .login-page .forgot-link {
-    margin-bottom: 14px;
-  }
-  .login-page .invitation-note {
-    margin-top: 14px;
-    padding-top: 12px;
-  }
-  .login-page .auth-brand-panel h1 {
-    font-size: clamp(25px, 4.5dvh, 34px);
-  }
-  .login-page .auth-brand-footer {
-    margin-top: 18px;
-  }
-}
-@media (max-height: 540px) {
-  .login-page {
-    padding-block: 10px;
-    gap: 6px 4vw;
-  }
-  .login-page .auth-card {
-    padding: 14px 20px;
-  }
-  .login-page .invitation-note {
-    display: none;
-  }
-  .login-page .auth-brand-panel > h1,
-  .login-page .auth-brand-panel > p,
-  .login-page .auth-brand-footer {
-    display: none;
-  }
-}
-@media (max-width: 700px) and (max-height: 480px) {
-  .login-page {
-    grid-template-columns: minmax(70px, 0.4fr) minmax(0, 1fr);
-    grid-template-rows: auto minmax(0, 1fr) auto;
-    gap: 4px 12px;
-    padding: 8px 16px;
-  }
-  .login-page .auth-card > .eyebrow,
-  .login-page .auth-card > p {
-    display: none;
-  }
-  .login-page .auth-card h1 {
-    margin-bottom: 8px;
-  }
-  .login-page .auth-card {
-    padding: 8px 16px;
-  }
-  .login-page .auth-card .field {
-    gap: 5px;
-    margin-bottom: 8px;
-  }
-  .login-page .auth-card input,
-  .login-page .auth-card .form-actions .button {
-    height: 36px;
-    min-height: 36px;
-  }
-}
-@media (max-width: 700px) and (max-height: 640px) {
-  .login-page .invitation-note {
-    display: none;
-  }
-}
-@media (max-height: 480px) {
-  .login-page .auth-card > p {
-    display: none;
-  }
-}
-
-@media (min-width: 701px) {
-  .login-page {
-    grid-template-columns: minmax(0, 1.08fr) minmax(0, 1fr);
-    column-gap: clamp(28px, 4vw, 64px);
-    padding-inline: max(5vw, calc((100vw - 1064px) / 2));
-  }
-  .login-page .auth-brand-panel {
-    width: 100%;
-    align-items: center;
-    text-align: center;
-  }
-  .login-page .auth-card {
-    max-width: 480px;
-  }
-  .login-page .auth-logo-frame {
-    width: clamp(110px, 28dvh, 240px);
-    height: clamp(110px, 28dvh, 240px);
-  }
-  .login-page .auth-top {
-    width: calc(100vw - clamp(40px, 10vw, 160px));
-    justify-self: center;
-  }
 }

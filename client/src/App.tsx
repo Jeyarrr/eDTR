@@ -1,4 +1,5 @@
 import { createContext, useContext, useEffect, useRef, useState } from 'react';
+import { flushSync } from 'react-dom';
 import { Routes, Route, Navigate, NavLink, useLocation, useNavigate, Link } from 'react-router-dom';
 import {
   Sun,
@@ -14,6 +15,17 @@ import {
   EyeOff,
   ArrowRight,
   LogOut,
+  LayoutDashboard,
+  CalendarCheck,
+  FileClock,
+  UsersRound,
+  Wallet,
+  Menu,
+  PanelLeft,
+  ChevronRight,
+  ChevronDown,
+  UserRound,
+  Settings2,
 } from 'lucide-react';
 import { api, post, setCsrf } from './api';
 import { Form, Field, Notice, State, useResource, Modal } from './ui';
@@ -39,7 +51,7 @@ export default function App() {
     [initial, setInitial] = useState(true),
     [revision, setRevision] = useState(0),
     [toast, setToast] = useState('');
-  const [theme, setTheme] = useState(() => localStorage.getItem('edtr-theme') || 'light');
+  const [theme, setTheme] = useState(() => localStorage.getItem('edtr-theme') || 'dark');
   useEffect(() => {
     document.documentElement.dataset.theme = theme;
     localStorage.setItem('edtr-theme', theme);
@@ -152,7 +164,8 @@ function Shell({ onLogout }: { onLogout: () => void }) {
     [open, setOpen] = useState(false),
     [loggingOut, setLoggingOut] = useState(false);
   const [accountOpen, setAccountOpen] = useState(false),
-    [accountPanel, setAccountPanel] = useState('');
+    [accountPanel, setAccountPanel] = useState(''),
+    [collapsed, setCollapsed] = useState(false);
   const accountRef = useRef<HTMLDivElement>(null);
   useEffect(() => {
     const close = (event: PointerEvent) => {
@@ -170,18 +183,16 @@ function Shell({ onLogout }: { onLogout: () => void }) {
   }, []);
   const manager = user.role !== 'EMPLOYEE';
   const nav = [
-    { to: '/', label: 'Dashboard', asset: 'nav-dashboard.svg' },
+    { to: '/', label: 'Dashboard', icon: LayoutDashboard },
     {
       to: '/attendance',
       label: manager ? 'Attendance' : 'My attendance',
-      asset: 'nav-attendance.svg',
+      icon: CalendarCheck,
     },
-    { to: '/dtr', label: manager ? 'Employee Log' : 'My DTR', asset: 'nav-records.svg' },
-    ...(manager
-      ? [{ to: '/employees', label: 'User Management', asset: 'nav-employees.svg' }]
-      : []),
+    { to: '/dtr', label: manager ? 'Employee Log' : 'My DTR', icon: FileClock },
+    ...(manager ? [{ to: '/employees', label: 'User Management', icon: UsersRound }] : []),
     { to: '/requests', label: manager ? 'Requests' : 'My requests', icon: ClipboardCheck },
-    { to: '/payroll', label: manager ? 'Payroll' : 'My payslips', asset: 'nav-payroll.svg' },
+    { to: '/payroll', label: manager ? 'Payroll' : 'My payslips', icon: Wallet },
     ...(manager
       ? [
           { to: '/schedules', label: 'Work Schedules', icon: CalendarClock },
@@ -205,7 +216,7 @@ function Shell({ onLogout }: { onLogout: () => void }) {
     }
   }
   return (
-    <div className="app-shell">
+    <div className={`app-shell ${collapsed ? 'is-collapsed' : ''}`}>
       {accountPanel && (
         <Modal title={accountPanel} onClose={() => setAccountPanel('')}>
           {accountPanel === 'Profile' ? (
@@ -239,7 +250,7 @@ function Shell({ onLogout }: { onLogout: () => void }) {
           onClick={() => setOpen(false)}
         />
       )}
-      <aside className={`sidebar ${open ? 'open' : ''}`}>
+      <aside className={`sidebar ${open ? 'open' : ''} ${collapsed ? 'sidebar-collapsed' : ''}`}>
         <Link className="sidebar-brand" to="/">
           <Logo />
           <div>
@@ -253,37 +264,44 @@ function Shell({ onLogout }: { onLogout: () => void }) {
               key={item.to}
               to={item.to}
               end={item.to === '/'}
+              title={collapsed ? item.label : undefined}
               className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}
             >
-              {item.asset ? (
-                <span className="nav-asset">
-                  <img src={`/assets/${item.asset}`} alt="" />
-                </span>
-              ) : (
-                item.icon && <item.icon size={21} />
-              )}
+              <item.icon size={18} strokeWidth={1.7} />
               <span>{item.label}</span>
             </NavLink>
           ))}
         </nav>
         <div className="sidebar-bottom">
           <div className="timezone-note">
-            <Clock3 size={15} />
-            <span>Asia/Manila · UTC+08:00</span>
+            <span className="workspace-status-dot" />
+            <span>Workspace connected</span>
           </div>
         </div>
       </aside>
       <div className="main-shell">
         <header className="topbar">
-          <button
-            className="icon-button menu-button"
-            aria-label="Open navigation"
-            aria-expanded={open}
-            onClick={() => setOpen((v) => !v)}
-          >
-            <img src="/assets/menu.svg" alt="" />
-          </button>
-          <span className="topbar-title">{title}</span>
+          <div className="topbar-left">
+            <button
+              className="icon-button menu-button"
+              aria-label="Open navigation"
+              aria-expanded={open}
+              onClick={() => setOpen((v) => !v)}
+            >
+              <Menu size={20} />
+            </button>
+            <button
+              className="icon-button desktop-collapse"
+              aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+              aria-expanded={!collapsed}
+              onClick={() => setCollapsed((value) => !value)}
+            >
+              <PanelLeft size={18} />
+            </button>
+            <span className="breadcrumb-workspace">Workspace</span>
+            <ChevronRight size={13} className="breadcrumb-chevron" />
+            <span className="topbar-title">{title}</span>
+          </div>
           <div className="topbar-right">
             <span className="secure-label">
               <ShieldCheck size={15} />
@@ -315,6 +333,7 @@ function Shell({ onLogout }: { onLogout: () => void }) {
                         : 'Human resources'}
                   </small>
                 </div>
+                <ChevronDown size={14} />
               </button>
               {accountOpen && (
                 <div className="account-dropdown">
@@ -324,7 +343,7 @@ function Shell({ onLogout }: { onLogout: () => void }) {
                       setAccountOpen(false);
                     }}
                   >
-                    Profile
+                    <UserRound size={16} /> Profile
                   </button>
                   <button
                     onClick={() => {
@@ -332,7 +351,7 @@ function Shell({ onLogout }: { onLogout: () => void }) {
                       setAccountOpen(false);
                     }}
                   >
-                    Settings
+                    <Settings2 size={16} /> Settings
                   </button>
                   <button onClick={logout} disabled={loggingOut}>
                     <LogOut size={16} />
@@ -360,13 +379,40 @@ function Shell({ onLogout }: { onLogout: () => void }) {
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
           <footer className="app-footer">
-            <span>Attendance · Electronic Daily Time Record</span>
-            <span>Timekeeping with a clear record.</span>
+            <span>© {new Date().getFullYear()} Viotech I.T. Solutions</span>
+            <span>
+              Attendance workspace <span className="footer-version">Asia/Manila</span>
+            </span>
           </footer>
         </main>
       </div>
     </div>
   );
+}
+async function unfoldLogin(update: () => void) {
+  if (
+    !document.startViewTransition ||
+    window.matchMedia('(prefers-reduced-motion: reduce)').matches
+  ) {
+    update();
+    return;
+  }
+  const root = document.documentElement;
+  let committed = false;
+  const commit = () => {
+    committed = true;
+    flushSync(update);
+  };
+  root.dataset.loginTransition = 'unfold';
+  try {
+    const transition = document.startViewTransition(commit);
+    await transition.finished;
+  } catch {
+    // A skipped or unsupported transition must never prevent a successful sign-in.
+    if (!committed) commit();
+  } finally {
+    delete root.dataset.loginTransition;
+  }
 }
 function AuthPage({
   mode = 'login',
@@ -381,189 +427,256 @@ function AuthPage({
   const navigate = useNavigate();
   const token = new URLSearchParams(useLocation().search).get('token');
   return (
-    <div className={`auth-page ${mode === 'login' ? 'login-page' : 'recovery-page'}`}>
-      <div className="auth-top">
-        <ThemeButton />
-      </div>
+    <div className={`auth-page ${mode === 'login' ? 'login-page company-login' : 'recovery-page'}`}>
       {mode === 'login' && (
-        <section className="auth-brand-panel">
-          <div className="auth-logo-frame">
-            <Logo />
+        <section
+          className="auth-brand-panel login-story"
+          aria-label="About the attendance workspace"
+        >
+          <Link to="/login" className="login-brand-link" aria-label="VioTech attendance login">
+            <img
+              className="brand-logo"
+              src="/assets/viotech-transparent.png"
+              alt="VioTech IT Solutions"
+            />
+          </Link>
+          <div className="story-main">
+            <span className="eyebrow">
+              <span className="small-line" /> VIOTECH TIME OPERATIONS
+            </span>
+            <h1>
+              Time operations.
+              <br />
+              <span>One workspace.</span>
+            </h1>
+            <p>
+              One connected workspace for the people,
+              <br className="desktop-break" /> schedules, and workdays moving Viotech forward.
+            </p>
+            <div className="login-capabilities" aria-label="Attendance features">
+              {[
+                {
+                  icon: Clock3,
+                  title: 'Time & attendance',
+                  description: 'A clear record of every workday, in one place.',
+                },
+                {
+                  icon: CalendarClock,
+                  title: 'Schedules & approvals',
+                  description: 'Clear responsibilities. Reliable timekeeping.',
+                },
+                {
+                  icon: UsersRound,
+                  title: 'People & payroll',
+                  description: 'One workspace for the teams behind the work.',
+                },
+              ].map((item) => (
+                <div className="login-capability" key={item.title}>
+                  <span>
+                    <item.icon size={18} strokeWidth={1.6} />
+                  </span>
+                  <div>
+                    <strong>{item.title}</strong>
+                    <p>{item.description}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
           </div>
-          <span className="eyebrow">ELECTRONIC DAILY TIME RECORD</span>
-          <h1>
-            A better workday
-            <br />
-            starts with a clear record.
-          </h1>
-          <p>Your time. Your attendance. All in one place.</p>
-          <div className="auth-brand-footer">
-            <ShieldCheck size={17} />
-            <span>Built for reliable, paperless timekeeping.</span>
+          <div className="story-footer">
+            <span>VIOTECH I.T. SOLUTIONS</span>
+            <span>
+              Your work, connected. <ArrowRight size={15} />
+            </span>
           </div>
         </section>
       )}
-      <section className="auth-card">
+      <section className={mode === 'login' ? 'login-form-panel' : 'recovery-form-panel'}>
         {mode !== 'login' && (
-          <Link className="back-link" to="/login">
-            <ArrowLeft size={17} />
-            Back to sign in
-          </Link>
-        )}
-        {mode === 'forgot' && (
-          <img className="recovery-key" src="/assets/recovery-key.svg" alt="" />
-        )}
-        {complete ? (
-          <div className="auth-complete">
-            <ShieldCheck size={44} />
-            <h1>{mode === 'forgot' ? 'Check your email' : 'Your account is ready'}</h1>
-            <p>
-              {mode === 'forgot'
-                ? 'If your email matches an active account, you will receive a recovery link. The link expires after 30 minutes.'
-                : 'Your password has been saved. Sign in to continue to your workspace.'}
-            </p>
-            <Link className="button primary" to="/login">
-              Back to sign in
-              <ArrowRight size={17} />
-            </Link>
+          <div className="auth-top">
+            <ThemeButton />
           </div>
-        ) : (
-          <>
-            <span className="eyebrow">
-              {mode === 'login' ? 'WELCOME TO VIOTECH' : 'ACCOUNT RECOVERY'}
-            </span>
-            <h1>
-              {mode === 'login'
-                ? 'Welcome back!'
-                : mode === 'forgot'
-                  ? 'Forgot password?'
-                  : 'Set your password'}
-            </h1>
-            <p>
-              {mode === 'login'
-                ? 'Sign in to manage and track your attendance.'
-                : mode === 'forgot'
-                  ? 'Enter your work email and we’ll help you get back in.'
-                  : 'Create a strong password to secure your account.'}
-            </p>
-            <Form
-              submit={
-                mode === 'login'
-                  ? 'Sign in'
-                  : mode === 'forgot'
-                    ? 'Send recovery link'
-                    : 'Save password'
-              }
-              onSubmit={async (form) => {
-                if (mode === 'login') {
-                  const data = await post('/auth/login', {
-                    email: form.get('email'),
-                    password: form.get('password'),
-                  });
-                  onLogin?.(data);
-                  navigate('/');
-                } else if (mode === 'forgot') {
-                  await post('/auth/forgot-password', { email: form.get('email') });
-                  setComplete(true);
-                } else {
-                  if (form.get('password') !== form.get('confirm'))
-                    throw new Error('Passwords do not match.');
-                  await post('/auth/reset-password', { token, password: form.get('password') });
-                  setComplete(true);
-                }
-              }}
-            >
-              {mode !== 'reset' && (
-                <Field label={mode === 'login' ? 'Username or work email' : 'Work email'}>
-                  <input
-                    name="email"
-                    type={mode === 'login' ? 'text' : 'email'}
-                    required
-                    placeholder={
-                      mode === 'login' ? 'Username or you@company.com' : 'you@company.com'
-                    }
-                    autoComplete="username"
-                  />
-                </Field>
+        )}
+        {mode === 'login' && (
+          <div className="login-mobile-brand">
+            <img
+              className="brand-logo"
+              src="/assets/viotech-transparent.png"
+              alt="VioTech IT Solutions"
+            />
+          </div>
+        )}
+        <section className={`auth-card ${mode === 'login' ? 'login-form-wrap' : ''}`}>
+          {mode !== 'login' && (
+            <Link className="back-link" to="/login">
+              <ArrowLeft size={17} />
+              Back to sign in
+            </Link>
+          )}
+          {mode === 'forgot' && (
+            <img className="recovery-key" src="/assets/recovery-key.svg" alt="" />
+          )}
+          {complete ? (
+            <div className="auth-complete">
+              <ShieldCheck size={44} />
+              <h1>{mode === 'forgot' ? 'Check your email' : 'Your account is ready'}</h1>
+              <p>
+                {mode === 'forgot'
+                  ? 'If your email matches an active account, you will receive a recovery link. The link expires after 30 minutes.'
+                  : 'Your password has been saved. Sign in to continue to your workspace.'}
+              </p>
+              <Link className="button primary" to="/login">
+                Back to sign in
+                <ArrowRight size={17} />
+              </Link>
+            </div>
+          ) : (
+            <>
+              <span className="eyebrow">
+                {mode === 'login' ? 'YOUR VIOTECH WORKSPACE' : 'ACCOUNT RECOVERY'}
+              </span>
+              {mode === 'login' ? (
+                <h2>Welcome back.</h2>
+              ) : (
+                <h1>{mode === 'forgot' ? 'Forgot password?' : 'Set your password'}</h1>
               )}
-              {mode !== 'forgot' && (
-                <>
-                  <Field
-                    label="Password"
-                    hint={
-                      mode === 'reset'
-                        ? 'At least 12 characters, including uppercase, lowercase, and a number.'
-                        : undefined
-                    }
-                  >
-                    <div className="password-field">
-                      <input
-                        name="password"
-                        type={visible ? 'text' : 'password'}
-                        required
-                        minLength={mode === 'reset' ? 12 : 1}
-                        autoComplete={mode === 'login' ? 'current-password' : 'new-password'}
-                        placeholder={
-                          mode === 'login' ? 'Enter your password' : 'Create a secure password'
-                        }
-                      />
-                      <button
-                        type="button"
-                        className="icon-button"
-                        aria-label={visible ? 'Hide password' : 'Show password'}
-                        onClick={() => setVisible((v) => !v)}
-                      >
-                        {!visible && theme === 'light' ? (
-                          <img src="/assets/password-hidden.svg" alt="" />
-                        ) : visible ? (
-                          <Eye size={19} />
-                        ) : (
-                          <EyeOff size={19} />
-                        )}
-                      </button>
-                    </div>
+              <p>
+                {mode === 'login'
+                  ? 'Sign in to get a clear picture of your work.'
+                  : mode === 'forgot'
+                    ? 'Enter your work email and we’ll help you get back in.'
+                    : 'Create a strong password to secure your account.'}
+              </p>
+              <Form
+                busyLabel={mode === 'login' ? 'Signing in…' : undefined}
+                submitIcon={mode === 'login' ? <ArrowRight size={17} /> : undefined}
+                submit={
+                  mode === 'login'
+                    ? 'Sign in to workspace'
+                    : mode === 'forgot'
+                      ? 'Send recovery link'
+                      : 'Save password'
+                }
+                onSubmit={async (form) => {
+                  if (mode === 'login') {
+                    const data = await post('/auth/login', {
+                      email: form.get('email'),
+                      password: form.get('password'),
+                    });
+                    await unfoldLogin(() => {
+                      onLogin?.(data);
+                      navigate('/', { replace: true });
+                    });
+                  } else if (mode === 'forgot') {
+                    await post('/auth/forgot-password', { email: form.get('email') });
+                    setComplete(true);
+                  } else {
+                    if (form.get('password') !== form.get('confirm'))
+                      throw new Error('Passwords do not match.');
+                    await post('/auth/reset-password', { token, password: form.get('password') });
+                    setComplete(true);
+                  }
+                }}
+              >
+                {mode !== 'reset' && (
+                  <Field label={mode === 'login' ? 'Email or username' : 'Work email'}>
+                    <input
+                      name="email"
+                      type={mode === 'login' ? 'text' : 'email'}
+                      required
+                      placeholder={mode === 'login' ? 'you@viotech.com' : 'you@company.com'}
+                      autoComplete="username"
+                    />
                   </Field>
-                  {mode === 'login' ? (
-                    <Link className="forgot-link" to="/forgot-password">
-                      Forgot password?
-                    </Link>
-                  ) : (
-                    <Field label="Confirm password">
-                      <input
-                        name="confirm"
-                        type={visible ? 'text' : 'password'}
-                        autoComplete="new-password"
-                        minLength={12}
-                        required
-                        placeholder="Re-enter your password"
-                      />
+                )}
+                {mode !== 'forgot' && (
+                  <>
+                    <Field
+                      label="Password"
+                      hint={
+                        mode === 'reset'
+                          ? 'At least 12 characters, including uppercase, lowercase, and a number.'
+                          : undefined
+                      }
+                    >
+                      <div className="password-field">
+                        <input
+                          name="password"
+                          type={visible ? 'text' : 'password'}
+                          required
+                          minLength={mode === 'reset' ? 12 : 1}
+                          autoComplete={mode === 'login' ? 'current-password' : 'new-password'}
+                          placeholder={
+                            mode === 'login' ? 'Enter your password' : 'Create a secure password'
+                          }
+                        />
+                        <button
+                          type="button"
+                          className="icon-button"
+                          aria-label={visible ? 'Hide password' : 'Show password'}
+                          aria-pressed={visible}
+                          onClick={() => setVisible((v) => !v)}
+                        >
+                          {mode === 'login' ? (
+                            visible ? (
+                              <EyeOff size={18} />
+                            ) : (
+                              <Eye size={18} />
+                            )
+                          ) : !visible && theme === 'light' ? (
+                            <img src="/assets/password-hidden.svg" alt="" />
+                          ) : visible ? (
+                            <Eye size={19} />
+                          ) : (
+                            <EyeOff size={19} />
+                          )}
+                        </button>
+                      </div>
                     </Field>
-                  )}
+                    {mode === 'reset' && (
+                      <Field label="Confirm password">
+                        <input
+                          name="confirm"
+                          type={visible ? 'text' : 'password'}
+                          autoComplete="new-password"
+                          minLength={12}
+                          required
+                          placeholder="Re-enter your password"
+                        />
+                      </Field>
+                    )}
+                  </>
+                )}
+                {mode === 'reset' && !token && (
+                  <Notice>
+                    This invitation or recovery link is missing a token. Ask your administrator for
+                    a new link.
+                  </Notice>
+                )}
+              </Form>
+              {mode === 'login' && (
+                <>
+                  <p className="login-help">
+                    <Link to="/forgot-password" aria-label="Forgot password?">
+                      Need access or help signing in?
+                    </Link>
+                    <br />
+                    <span>Contact your Viotech system administrator.</span>
+                  </p>
+                  <div className="login-security">
+                    <ShieldCheck size={15} />
+                    <span>Protected sign-in for your company workspace.</span>
+                  </div>
                 </>
               )}
-              {mode === 'reset' && !token && (
-                <Notice>
-                  This invitation or recovery link is missing a token. Ask your administrator for a
-                  new link.
-                </Notice>
-              )}
-            </Form>
-            {mode === 'login' && (
-              <div className="invitation-note">
-                <ShieldCheck size={18} />
-                <p>
-                  New to the team?
-                  <br />
-                  <span>Ask your administrator for an account invitation.</span>
-                </p>
-              </div>
-            )}
-          </>
-        )}
+            </>
+          )}
+        </section>
+        <div className={`auth-copyright ${mode === 'login' ? 'login-form-footer' : ''}`}>
+          <span>Attendance workspace</span>
+          <span>© {new Date().getFullYear()} Viotech</span>
+        </div>
       </section>
-      <span className="auth-copyright">
-        © {new Date().getFullYear()} VioTech IT Solutions · Attendance
-      </span>
     </div>
   );
 }

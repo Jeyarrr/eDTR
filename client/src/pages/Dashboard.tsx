@@ -390,11 +390,7 @@ function Stat({
     <div className="stat-card">
       <div>
         <span>{label}</span>
-        {Icon === Users ? (
-          <img className="stat-asset" src="/assets/total-employees.svg" alt="" />
-        ) : (
-          <Icon size={22} />
-        )}
+        <Icon size={18} strokeWidth={1.7} />
       </div>
       <strong>{value}</strong>
       {hint && <small>{hint}</small>}

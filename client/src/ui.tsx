@@ -222,11 +222,15 @@ export function Form({
   onSubmit,
   children,
   submit = 'Save',
+  busyLabel = 'Saving…',
+  submitIcon,
   onCancel,
 }: {
   onSubmit: (form: FormData) => Promise<void>;
   children: ReactNode;
   submit?: string;
+  busyLabel?: string;
+  submitIcon?: ReactNode;
   onCancel?: () => void;
 }) {
   const [busy, setBusy] = useState(false),
@@ -262,7 +266,8 @@ export function Form({
         )}
         <button className="button primary" type="submit" disabled={busy}>
           {busy && <Loader2 size={17} className="spin" />}
-          {busy ? 'Saving…' : submit}
+          {busy ? busyLabel : submit}
+          {!busy && submitIcon}
         </button>
       </div>
     </form>

@@ -1,16 +1,17 @@
 import { test, expect } from '@playwright/test';
 async function login(page: any, email = 'admin', password = 'admin') {
   await page.goto('/login');
-  await page.getByLabel('Username or work email').fill(email);
+  await page.getByLabel('Email or username').fill(email);
   await page.getByLabel('Password', { exact: true }).fill(password);
-  await page.getByRole('button', { name: 'Sign in', exact: true }).click();
+  await page.getByRole('button', { name: 'Sign in to workspace', exact: true }).click();
   await expect(page).toHaveURL(/\/$/);
   await expect(page.getByRole('heading', { name: /^Welcome back,/ })).toBeVisible();
+  await expect(page.locator('html')).not.toHaveAttribute('data-login-transition');
 }
-test('login fits the viewport without scrolling or overlapping controls', async ({ page }) => {
+test('company login fits desktop and mobile without clipping the form', async ({ page }) => {
   await page.emulateMedia({ reducedMotion: 'reduce' });
   await page.goto('/login');
-  await page.getByRole('button', { name: 'Sign in', exact: true }).waitFor();
+  await page.getByRole('button', { name: 'Sign in to workspace', exact: true }).waitFor();
   await page.evaluate(() => document.fonts.ready);
   for (const [width, height] of [
     [1920, 1080],
@@ -25,19 +26,18 @@ test('login fits the viewport without scrolling or overlapping controls', async 
   ]) {
     await page.setViewportSize({ width, height });
     const layout = await page.evaluate(() => {
-      const boxes = ['.auth-top', '.auth-card', '.auth-logo-frame', '.auth-copyright'].map(
-        (selector) => {
-          const r = document.querySelector(selector)!.getBoundingClientRect();
-          return { x: r.x, y: r.y, right: r.right, bottom: r.bottom };
-        },
-      );
+      const boxes = [
+        '.auth-card',
+        '.login-form-footer',
+        '.login-brand-link',
+        '.login-mobile-brand .brand-logo',
+      ]
+        .map((selector) => document.querySelector(selector)!.getBoundingClientRect())
+        .filter((r) => r.width > 0 && r.height > 0)
+        .map((r) => ({ x: r.x, y: r.y, right: r.right, bottom: r.bottom }));
       return {
         width: document.documentElement.scrollWidth,
         height: document.documentElement.scrollHeight,
-        brandCenter: (() => {
-          const r = document.querySelector('.auth-brand-panel')!.getBoundingClientRect();
-          return r.x + r.width / 2;
-        })(),
         boxes,
         overlap: boxes.some((a, i) =>
           boxes
@@ -50,34 +50,120 @@ test('login fits the viewport without scrolling or overlapping controls', async 
         ),
       };
     });
-    expect(layout.width, `${width}x${height} horizontal overflow`).toBeLessThanOrEqual(width);
-    expect(layout.height, `${width}x${height} vertical overflow`).toBeLessThanOrEqual(height);
-    expect(layout.overlap, `${width}x${height} overlapping controls`).toBe(false);
-    if (width >= 1280 && height >= 700) {
-      const card = layout.boxes[1];
-      const logo = layout.boxes[2];
-      expect(Math.abs(logo.x + (logo.right - logo.x) / 2 - layout.brandCenter)).toBeLessThan(2);
-      expect(card.right - card.x).toBeGreaterThanOrEqual(440);
-      expect(card.bottom - card.y).toBeGreaterThanOrEqual(500);
-    }
+    expect(layout.width, width + 'x' + height + ' horizontal overflow').toBeLessThanOrEqual(width);
+    if (height >= 768)
+      expect(layout.height, width + 'x' + height + ' vertical overflow').toBeLessThanOrEqual(
+        height,
+      );
+    expect(layout.overlap, width + 'x' + height + ' overlapping controls').toBe(false);
     for (const box of layout.boxes) {
       expect(box.x).toBeGreaterThanOrEqual(0);
       expect(box.y).toBeGreaterThanOrEqual(0);
       expect(box.right).toBeLessThanOrEqual(width);
-      expect(box.bottom).toBeLessThanOrEqual(height);
+      expect(box.bottom).toBeLessThanOrEqual(layout.height);
     }
+    if (width >= 1280 && height >= 700) expect(layout.boxes[0].right - layout.boxes[0].x).toBe(420);
   }
   await page.setViewportSize({ width: 390, height: 844 });
   await page.route('**/api/auth/login', (route) =>
     route.fulfill({ status: 401, json: { error: 'Incorrect username or password.' } }),
   );
-  await page.getByLabel('Username or work email').fill('missing');
+  await page.getByLabel('Email or username').fill('missing');
   await page.getByLabel('Password', { exact: true }).fill('incorrect');
-  await page.getByRole('button', { name: 'Sign in', exact: true }).click();
+  await page.getByRole('button', { name: 'Sign in to workspace', exact: true }).click();
   await expect(page.getByRole('alert')).toContainText('Incorrect username or password.');
   expect(await page.evaluate(() => document.documentElement.scrollHeight)).toBeLessThanOrEqual(844);
 });
-test('management screens, Figma assets, dialogs and dark mode', async ({ page }) => {
+
+test('successful login unfolds into the dashboard on desktop and mobile', async ({ page }) => {
+  await page.emulateMedia({ reducedMotion: 'no-preference' });
+  for (const width of [1366, 390]) {
+    await page.setViewportSize({ width, height: 844 });
+    await page.goto('/login');
+    await page.getByLabel('Email or username').fill('admin');
+    await page.getByLabel('Password', { exact: true }).fill('incorrect');
+    await page.getByRole('button', { name: 'Sign in to workspace', exact: true }).click();
+    await expect(page.getByRole('alert')).toBeVisible();
+    await expect(page).toHaveURL(/\/login$/);
+    await expect(page.locator('html')).not.toHaveAttribute('data-login-transition');
+
+    await page.getByLabel('Password', { exact: true }).fill('admin');
+    const unfolding = page.waitForFunction(() => {
+      const names = document
+        .getAnimations()
+        .map((animation) => (animation as CSSAnimation).animationName);
+      return (
+        names.includes('login-unfold-right') &&
+        (window.innerWidth < 768 || names.includes('login-unfold-left'))
+      );
+    });
+    await page.getByRole('button', { name: 'Sign in to workspace', exact: true }).click();
+    await unfolding;
+    await expect(page).toHaveURL(/\/$/);
+    await expect(page.getByRole('heading', { name: /^Welcome back,/ })).toBeVisible();
+    await expect(page.locator('html')).not.toHaveAttribute('data-login-transition');
+    expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(
+      width,
+    );
+    await page.getByRole('button', { name: 'Account menu', exact: true }).click();
+    await page.getByRole('button', { name: 'Logout', exact: true }).click();
+    await expect(page).toHaveURL(/\/login$/);
+  }
+});
+
+test('login remains immediate with reduced motion or no View Transition support', async ({
+  page,
+}) => {
+  await page.emulateMedia({ reducedMotion: 'reduce' });
+  await page.addInitScript(() => {
+    document.startViewTransition = () => {
+      throw new Error('Reduced motion must not start a View Transition.');
+    };
+  });
+  await login(page);
+  await expect(page.locator('html')).not.toHaveAttribute('data-login-transition');
+  await page.getByRole('button', { name: 'Account menu', exact: true }).click();
+  await page.getByRole('button', { name: 'Logout', exact: true }).click();
+  await expect(page).toHaveURL(/\/login$/);
+  await page.emulateMedia({ reducedMotion: 'no-preference' });
+  await page.evaluate(() =>
+    Object.defineProperty(document, 'startViewTransition', { value: undefined }),
+  );
+  await page.getByLabel('Email or username').fill('admin');
+  await page.getByLabel('Password', { exact: true }).fill('admin');
+  await page.getByRole('button', { name: 'Sign in to workspace', exact: true }).click();
+  await expect(page).toHaveURL(/\/$/);
+  await expect(page.getByRole('heading', { name: /^Welcome back,/ })).toBeVisible();
+  await expect(page.locator('html')).not.toHaveAttribute('data-login-transition');
+});
+
+test('company sidebar collapses, navigates and keeps the account controls accessible', async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await login(page);
+  await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark');
+  expect(
+    await page.evaluate(() =>
+      getComputedStyle(document.documentElement).getPropertyValue('--primary').trim(),
+    ),
+  ).toBe('#df0b3e');
+  await page.getByRole('button', { name: 'Collapse sidebar', exact: true }).click();
+  expect(await page.locator('.sidebar').evaluate((el) => el.getBoundingClientRect().width)).toBe(
+    76,
+  );
+  await page.getByRole('link', { name: 'Attendance', exact: true }).click();
+  await expect(page.getByRole('heading', { name: 'Team attendance', exact: true })).toBeVisible();
+  await page.getByRole('button', { name: 'Expand sidebar', exact: true }).click();
+  expect(await page.locator('.sidebar').evaluate((el) => el.getBoundingClientRect().width)).toBe(
+    224,
+  );
+  await page.getByRole('button', { name: 'Account menu', exact: true }).click();
+  await expect(page.getByRole('button', { name: 'Logout', exact: true })).toBeVisible();
+});
+
+test('management screens, company assets, dialogs and dark mode', async ({ page }) => {
+  await page.addInitScript(() => localStorage.setItem('edtr-theme', 'light'));
   const errors: string[] = [];
   page.on('pageerror', (error) => errors.push(error.message));
   await page.setViewportSize({ width: 1440, height: 1000 });
@@ -197,7 +283,9 @@ test('admin can log out from the header on a short desktop screen', async ({ pag
   await page.getByRole('button', { name: 'Logout', exact: true }).click();
   await expect(page).toHaveURL(/login/);
   await page.reload();
-  await expect(page.getByRole('button', { name: 'Sign in', exact: true })).toBeVisible();
+  await expect(
+    page.getByRole('button', { name: 'Sign in to workspace', exact: true }),
+  ).toBeVisible();
   expect((await page.request.get('/api/auth/me')).status()).toBe(401);
 });
 
@@ -259,6 +347,7 @@ test('photo upload enables clock out immediately and preserves it after refresh'
 });
 
 test('account menu opens profile and appearance settings', async ({ page }) => {
+  await page.addInitScript(() => localStorage.setItem('edtr-theme', 'light'));
   await login(page);
   await expect(page.locator('.sidebar .logout-button')).toHaveCount(0);
   await page.getByRole('button', { name: 'Account menu', exact: true }).click();
