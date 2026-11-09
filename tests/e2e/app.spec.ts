@@ -5,13 +5,16 @@ async function login(page: any, email = 'admin', password = 'admin') {
   await page.getByLabel('Password', { exact: true }).fill(password);
   await page.getByRole('button', { name: 'Sign in to workspace', exact: true }).click();
   await expect(page).toHaveURL(/\/$/);
-  await expect(page.getByRole('heading', { name: /^Welcome back,/ })).toBeVisible();
+  await expect(
+    page.getByRole('heading', { name: /^Good (morning|afternoon|evening),/ }),
+  ).toBeVisible();
   await expect(page.locator('html')).not.toHaveAttribute('data-login-transition');
 }
 test('company login fits desktop and mobile without clipping the form', async ({ page }) => {
   await page.emulateMedia({ reducedMotion: 'reduce' });
   await page.goto('/login');
   await page.getByRole('button', { name: 'Sign in to workspace', exact: true }).waitFor();
+  await expect(page.locator('.login-form-footer')).toContainText('© 2025 Viotech');
   await page.evaluate(() => document.fonts.ready);
   for (const [width, height] of [
     [1920, 1080],
@@ -100,7 +103,9 @@ test('successful login unfolds into the dashboard on desktop and mobile', async 
     await page.getByRole('button', { name: 'Sign in to workspace', exact: true }).click();
     await unfolding;
     await expect(page).toHaveURL(/\/$/);
-    await expect(page.getByRole('heading', { name: /^Welcome back,/ })).toBeVisible();
+    await expect(
+      page.getByRole('heading', { name: /^Good (morning|afternoon|evening),/ }),
+    ).toBeVisible();
     await expect(page.locator('html')).not.toHaveAttribute('data-login-transition');
     expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(
       width,
@@ -133,7 +138,9 @@ test('login remains immediate with reduced motion or no View Transition support'
   await page.getByLabel('Password', { exact: true }).fill('admin');
   await page.getByRole('button', { name: 'Sign in to workspace', exact: true }).click();
   await expect(page).toHaveURL(/\/$/);
-  await expect(page.getByRole('heading', { name: /^Welcome back,/ })).toBeVisible();
+  await expect(
+    page.getByRole('heading', { name: /^Good (morning|afternoon|evening),/ }),
+  ).toBeVisible();
   await expect(page.locator('html')).not.toHaveAttribute('data-login-transition');
 });
 
@@ -171,13 +178,13 @@ test('management screens, company assets, dialogs and dark mode', async ({ page 
   await page.screenshot({ path: 'test-results/login-light.png', fullPage: true });
   await login(page);
   await expect(page.getByRole('heading', { name: 'Weekly attendance', exact: true })).toBeVisible();
-  await expect(page.locator('.stat-card')).toHaveCount(6);
+  await expect(page.locator('.stat-card')).toHaveCount(5);
   await page.screenshot({ path: 'test-results/dashboard-light.png', fullPage: true });
   const logo = page.getByAltText('VioTech IT Solutions');
   await expect(logo).toHaveAttribute('src', '/assets/logo-light-transparent.png');
   expect(await logo.evaluate((i: HTMLImageElement) => i.complete && i.naturalWidth > 0)).toBe(true);
   await page.getByRole('button', { name: 'Switch to dark mode' }).click();
-  await expect(logo).toHaveAttribute('src', '/assets/logo-dark-transparent.png');
+  await expect(logo).toHaveAttribute('src', '/assets/viotech-transparent.png');
   await page.screenshot({ path: 'test-results/dashboard-dark.png', fullPage: true });
   await page.getByRole('button', { name: 'Switch to light mode' }).click();
   for (const [link, title] of [

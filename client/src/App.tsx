@@ -26,6 +26,8 @@ import {
   ChevronDown,
   UserRound,
   Settings2,
+  ArrowUpRight,
+  CircleHelp,
 } from 'lucide-react';
 import { api, post, setCsrf } from './api';
 import { Form, Field, Notice, State, useResource, Modal } from './ui';
@@ -153,7 +155,9 @@ export function Logo({ className = '' }: { className?: string }) {
   return (
     <img
       className={`brand-logo ${className}`}
-      src={`/assets/logo-${theme === 'dark' ? 'dark' : 'light'}-transparent.png`}
+      src={
+        theme === 'dark' ? '/assets/viotech-transparent.png' : '/assets/logo-light-transparent.png'
+      }
       alt="VioTech IT Solutions"
     />
   );
@@ -201,6 +205,11 @@ function Shell({ onLogout }: { onLogout: () => void }) {
       : []),
   ];
   const title = nav.find((n) => n.to === location.pathname)?.label || 'Workspace';
+  const navGroups = [
+    { label: 'Workspace', paths: ['/', '/attendance', '/dtr'] },
+    { label: 'People & operations', paths: ['/employees', '/requests', '/payroll'] },
+    { label: 'Administration', paths: ['/schedules', '/audit'] },
+  ];
   useEffect(() => {
     setOpen(false);
   }, [location.pathname]);
@@ -217,6 +226,9 @@ function Shell({ onLogout }: { onLogout: () => void }) {
   }
   return (
     <div className={`app-shell ${collapsed ? 'is-collapsed' : ''}`}>
+      <a className="skip-link" href="#main-content">
+        Skip to content
+      </a>
       {accountPanel && (
         <Modal title={accountPanel} onClose={() => setAccountPanel('')}>
           {accountPanel === 'Profile' ? (
@@ -257,25 +269,35 @@ function Shell({ onLogout }: { onLogout: () => void }) {
             <span>Electronic Daily Time Record</span>
           </div>
         </Link>
-        <div className="nav-caption">{manager ? 'MANAGEMENT WORKSPACE' : 'EMPLOYEE WORKSPACE'}</div>
-        <nav aria-label="Main navigation">
-          {nav.map((item) => (
-            <NavLink
-              key={item.to}
-              to={item.to}
-              end={item.to === '/'}
-              title={collapsed ? item.label : undefined}
-              className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}
-            >
-              <item.icon size={18} strokeWidth={1.7} />
-              <span>{item.label}</span>
-            </NavLink>
-          ))}
+        <nav className="workspace-nav" aria-label="Main navigation">
+          {navGroups.map((group) => {
+            const items = nav.filter((item) => group.paths.includes(item.to));
+            return (
+              items.length > 0 && (
+                <div className="nav-group" key={group.label}>
+                  <p className="nav-caption">{group.label}</p>
+                  {items.map((item) => (
+                    <NavLink
+                      key={item.to}
+                      to={item.to}
+                      end={item.to === '/'}
+                      title={collapsed ? item.label : undefined}
+                      className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}
+                    >
+                      <item.icon size={18} strokeWidth={1.7} />
+                      <span>{item.label}</span>
+                    </NavLink>
+                  ))}
+                </div>
+              )
+            );
+          })}
         </nav>
         <div className="sidebar-bottom">
           <div className="timezone-note">
             <span className="workspace-status-dot" />
             <span>Workspace connected</span>
+            <ArrowUpRight size={13} />
           </div>
         </div>
       </aside>
@@ -298,17 +320,17 @@ function Shell({ onLogout }: { onLogout: () => void }) {
             >
               <PanelLeft size={18} />
             </button>
+            <span className="topbar-divider" />
             <span className="breadcrumb-workspace">Workspace</span>
             <ChevronRight size={13} className="breadcrumb-chevron" />
             <span className="topbar-title">{title}</span>
           </div>
           <div className="topbar-right">
+            <ThemeButton />
             <span className="secure-label">
               <ShieldCheck size={15} />
               Secure workspace
             </span>
-            <ThemeButton />
-            <span className="topbar-divider" />
             <div className="account-menu" ref={accountRef}>
               <button
                 className="user-menu account-trigger"
@@ -323,7 +345,7 @@ function Shell({ onLogout }: { onLogout: () => void }) {
                     .slice(0, 2)
                     .join('')}
                 </span>
-                <div>
+                <div className="account-details">
                   <strong>{user.name}</strong>
                   <small>
                     {user.role === 'EMPLOYEE'
@@ -337,6 +359,11 @@ function Shell({ onLogout }: { onLogout: () => void }) {
               </button>
               {accountOpen && (
                 <div className="account-dropdown">
+                  <div className="dropdown-user">
+                    <strong>{user.name}</strong>
+                    <span>{user.email}</span>
+                  </div>
+                  <hr />
                   <button
                     onClick={() => {
                       setAccountPanel('Profile');
@@ -353,6 +380,7 @@ function Shell({ onLogout }: { onLogout: () => void }) {
                   >
                     <Settings2 size={16} /> Settings
                   </button>
+                  <hr />
                   <button onClick={logout} disabled={loggingOut}>
                     <LogOut size={16} />
                     {loggingOut ? 'Signing out...' : 'Logout'}
@@ -362,7 +390,7 @@ function Shell({ onLogout }: { onLogout: () => void }) {
             </div>
           </div>
         </header>
-        <main className="main-content">
+        <main id="main-content" className="main-content" tabIndex={-1}>
           <Routes>
             <Route path="/" element={<Dashboard />} />
             <Route path="/attendance" element={<AttendancePage />} />
@@ -378,13 +406,14 @@ function Shell({ onLogout }: { onLogout: () => void }) {
             )}
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
-          <footer className="app-footer">
-            <span>© {new Date().getFullYear()} Viotech I.T. Solutions</span>
-            <span>
-              Attendance workspace <span className="footer-version">Asia/Manila</span>
-            </span>
-          </footer>
         </main>
+        <footer className="app-footer">
+          <span>© {new Date().getFullYear()} Viotech I.T. Solutions</span>
+          <span>
+            <CircleHelp size={13} /> Attendance workspace{' '}
+            <span className="footer-version">Core workspace</span>
+          </span>
+        </footer>
       </div>
     </div>
   );
@@ -674,7 +703,7 @@ function AuthPage({
         </section>
         <div className={`auth-copyright ${mode === 'login' ? 'login-form-footer' : ''}`}>
           <span>Attendance workspace</span>
-          <span>© {new Date().getFullYear()} Viotech</span>
+          <span>© {mode === 'login' ? 2025 : new Date().getFullYear()} Viotech</span>
         </div>
       </section>
     </div>

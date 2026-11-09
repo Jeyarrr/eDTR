@@ -18,17 +18,7 @@ import {
 import { useApp } from '../App';
 import { post } from '../api';
 import { ClockProof } from '../ClockProof';
-import {
-  PageIntro,
-  Badge,
-  State,
-  hours,
-  timeText,
-  dateText,
-  useResource,
-  ZONE,
-  Notice,
-} from '../ui';
+import { Badge, State, hours, timeText, dateText, useResource, ZONE, Notice } from '../ui';
 function LiveClock({ offset }: { offset: number }) {
   const [tick, setTick] = useState(Date.now());
   useEffect(() => {
@@ -107,26 +97,38 @@ export function Dashboard() {
       setBusy(false);
     }
   }
+  const greeting =
+    now.hour < 12 ? 'Good morning' : now.hour < 18 ? 'Good afternoon' : 'Good evening';
+  const weeklyMinutes = data.weekly.reduce((sum: number, row: any) => sum + row.worked_minutes, 0);
   return (
-    <>
+    <div className="workspace-overview">
       {proofOpen && (
         <ClockProof onClose={() => setProofOpen(false)} onConfirm={(photo) => clock('in', photo)} />
       )}
-      <PageIntro
-        eyebrow={employee ? 'YOUR WORKDAY, AT A GLANCE' : 'TODAY’S WORKSPACE'}
-        title={`Welcome back, ${user.name.split(' ')[0]}!`}
-        description={
-          employee
-            ? 'Keep track of your time and make every workday count.'
-            : 'Here’s what’s happening with your team today.'
-        }
-        actions={
+      <div className="page-intro workspace-heading">
+        <div>
+          <span className="heading-eyebrow">
+            <i className="workspace-status-dot" />
+            WORKSPACE OVERVIEW
+          </span>
+          <h1>
+            {greeting}, {user.name.split(' ')[0]}
+            <span className="greeting-period">.</span>
+          </h1>
+          <p>Here’s a clear view of your people, attendance, and workdays.</p>
+        </div>
+        <div className="heading-actions">
           <div className="date-pill">
-            <CalendarDays size={18} />
-            {now.toFormat('cccc, MMMM dd, yyyy')}
+            <CalendarDays size={15} />
+            {now.toFormat('ccc, MMM d, yyyy')}
           </div>
-        }
-      />
+          <Link className="button primary workspace-action" to={employee ? '/dtr' : '/attendance'}>
+            <CalendarDays size={15} />
+            {employee ? 'My records' : 'View attendance'}
+            <ArrowUpRight size={14} />
+          </Link>
+        </div>
+      </div>
       {error && <Notice>{error}</Notice>}
       {employee ? (
         <>
@@ -212,14 +214,13 @@ export function Dashboard() {
           </div>
         </>
       ) : (
-        <div className="summary-grid">
+        <div className="summary-grid workspace-kpis">
           {[
             ['Total active employees', data.totals.employees, Users, 'Team members'],
             ['Present today', data.totals.present, UserCheck, 'Attendance recorded'],
             ['Absent today', data.totals.absent, UserX, 'After scheduled shift'],
             ['Late today', data.totals.late, Clock3, 'Past the grace period'],
             ['On leave today', data.totals.on_leave, CalendarDays, 'Approved leave'],
-            ['Currently clocked in', data.totals.clocked_in, Play, 'Active shifts'],
           ].map(([label, value, icon, hint]) => (
             <Stat
               key={label as string}
@@ -231,8 +232,69 @@ export function Dashboard() {
           ))}
         </div>
       )}
-      <div className="dashboard-panels">
-        <section className="panel chart-panel">
+      {!employee && (
+        <div className="operations-kpis">
+          {[
+            ['Currently clocked in', data.totals.clocked_in, 'Active shifts across your workspace'],
+            [
+              'Pending corrections',
+              data.pending_corrections,
+              'Attendance requests awaiting review',
+            ],
+            [
+              'Weekly working hours',
+              hours(weeklyMinutes),
+              'Recorded time over the last seven days',
+            ],
+          ].map(([label, value, caption]) => (
+            <section className="panel finance-kpi" key={String(label)}>
+              <span>{label}</span>
+              <strong>{value}</strong>
+              <p>{caption}</p>
+            </section>
+          ))}
+        </div>
+      )}
+      <div className="dashboard-workspace-grid">
+        <section className="panel activity-card">
+          <div className="panel-heading">
+            <div>
+              <h2>Recent attendance activity</h2>
+              <p>The latest updates from your workspace</p>
+            </div>
+            <Clock3 size={17} />
+          </div>
+          {data.activity.length ? (
+            <ul className="workspace-data-list">
+              {data.activity.slice(0, 4).map((record: any) => (
+                <li key={record.id}>
+                  <span>
+                    <Link to="/dtr">
+                      {record.name} {record.clock_out ? 'completed a shift' : 'clocked in'}
+                    </Link>
+                    <small>
+                      {record.employee_id} · {timeText(record.clock_out || record.clock_in)}
+                    </small>
+                  </span>
+                  <time dateTime={record.work_date}>{dateText(record.work_date)}</time>
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <div className="workspace-empty">
+              <span className="empty-icon">
+                <Clock3 size={22} strokeWidth={1.4} />
+              </span>
+              <strong>Your workday starts here</strong>
+              <p>Clock-ins and completed shifts will appear here.</p>
+            </div>
+          )}
+          <Link className="card-footnote" to="/dtr">
+            View all records
+            <ArrowUpRight size={13} />
+          </Link>
+        </section>
+        <section className="panel weekly-card">
           <div className="panel-heading">
             <div>
               <h2>{employee ? 'Your weekly attendance' : 'Weekly attendance'}</h2>
@@ -240,141 +302,153 @@ export function Dashboard() {
             </div>
             <span className="subtle-pill">Last 7 days</span>
           </div>
+          <div className="weekly-summary">
+            <div>
+              <span>
+                <i className="dot red" />
+                Recorded hours
+              </span>
+              <strong>{hours(weeklyMinutes)}</strong>
+            </div>
+            <div>
+              <span>
+                <i className="dot pale" />
+                Days present
+              </span>
+              <strong>{data.weekly.reduce((sum: number, row: any) => sum + row.present, 0)}</strong>
+            </div>
+          </div>
           <AttendanceChart data={data.weekly} />
         </section>
-        <section className="panel overview-panel">
+        <section className="panel workload-card">
+          <div className="panel-heading">
+            <div>
+              <h2>Daily attendance</h2>
+              <p>Recorded presence throughout the week</p>
+            </div>
+            <Users size={17} />
+          </div>
+          <ul className="workspace-workload">
+            {data.weekly.slice(-5).map((day: any) => (
+              <li key={day.date}>
+                <span>
+                  {DateTime.fromISO(day.date).toFormat('ccc, MMM d')}
+                  <strong>{day.present} present</strong>
+                </span>
+                <div className="workload-track">
+                  <i
+                    style={{
+                      width: day.present
+                        ? Math.min(100, (day.present / Math.max(1, data.totals.employees)) * 100) +
+                          '%'
+                        : '0%',
+                    }}
+                  />
+                </div>
+              </li>
+            ))}
+          </ul>
+        </section>
+        <section className="panel approvals-card">
+          <div className="panel-heading">
+            <div>
+              <h2>{employee ? 'Your work schedule' : 'Pending approvals'}</h2>
+              <p>
+                {employee
+                  ? 'Your assigned shift and break'
+                  : 'Keep your team’s time records accurate'}
+              </p>
+            </div>
+            <ClipboardCheck size={17} />
+          </div>
+          <div className="workspace-empty">
+            <span className="empty-icon">
+              {employee ? <CalendarDays size={20} /> : <ClipboardCheck size={20} />}
+            </span>
+            <strong>
+              {employee
+                ? schedule?.name || 'No schedule assigned'
+                : data.pending_corrections
+                  ? `${data.pending_corrections} correction request${data.pending_corrections === 1 ? '' : 's'}`
+                  : 'All caught up'}
+            </strong>
+            <p>
+              {employee
+                ? schedule
+                  ? schedule.start_time +
+                    ' – ' +
+                    schedule.end_time +
+                    ' · ' +
+                    schedule.break_minutes +
+                    ' min break'
+                  : 'Contact HR to assign your schedule.'
+                : data.pending_corrections
+                  ? 'Attendance corrections are ready for your review.'
+                  : 'No correction requests are waiting for review.'}
+            </p>
+          </div>
+          <Link className="card-footnote" to="/requests">
+            {employee ? 'My requests' : 'Review requests'}
+            <ChevronRight size={13} />
+          </Link>
+        </section>
+        <section className="panel status-card">
           <div className="panel-heading">
             <div>
               <h2>{employee ? 'Your attendance today' : 'Today’s attendance overview'}</h2>
-              <p>
-                {employee
-                  ? 'Your attendance for the current workday'
-                  : 'A quick pulse on your team'}
-              </p>
+              <p>{employee ? 'Your current workday' : 'A clear view of team attendance'}</p>
             </div>
           </div>
-          <div
-            className="ring-visual"
-            style={
-              {
-                '--progress': `${Math.min(100, data.totals.employees ? (data.totals.present / data.totals.employees) * 100 : 0)}%`,
-              } as any
-            }
-          >
-            <div>
-              <strong>
-                {data.totals.employees
-                  ? Math.round((data.totals.present / data.totals.employees) * 100)
-                  : 0}
-                %
-              </strong>
-              <span>present today</span>
+          <div className="status-breakdown">
+            <div
+              className="ring-visual"
+              style={
+                {
+                  '--progress':
+                    Math.min(
+                      100,
+                      data.totals.employees
+                        ? (data.totals.present / data.totals.employees) * 100
+                        : 0,
+                    ) + '%',
+                } as any
+              }
+            >
+              <div>
+                <strong>
+                  {data.totals.employees
+                    ? Math.round((data.totals.present / data.totals.employees) * 100)
+                    : 0}
+                  %
+                </strong>
+                <span>present today</span>
+              </div>
+            </div>
+            <div className="overview-legend">
+              <span>
+                <i className="dot red" />
+                Present<strong>{data.totals.present}</strong>
+              </span>
+              <span>
+                <i className="dot pale" />
+                Absent<strong>{data.totals.absent}</strong>
+              </span>
+              <span>
+                <i className="dot crimson" />
+                On leave<strong>{data.totals.on_leave}</strong>
+              </span>
             </div>
           </div>
-          <div className="overview-legend">
-            <span>
-              <i className="dot green" />
-              Present<strong>{data.totals.present}</strong>
-            </span>
-            <span>
-              <i className="dot red" />
-              Absent<strong>{data.totals.absent}</strong>
-            </span>
-            <span>
-              <i className="dot amber" />
-              On leave<strong>{data.totals.on_leave}</strong>
-            </span>
+          <div className="card-footnote">
+            <CheckCircle2 size={12} />
+            Attendance for {dateText(data.date)}
           </div>
         </section>
       </div>
-      {!employee && (
-        <Link className="review-banner" to="/requests">
-          <div className="review-icon">
-            <ClipboardCheck size={23} />
-          </div>
-          <div>
-            <strong>
-              {data.pending_corrections
-                ? `${data.pending_corrections} correction request${data.pending_corrections === 1 ? '' : 's'} awaiting review`
-                : 'All caught up on correction requests'}
-            </strong>
-            <p>Keep attendance accurate before payroll review.</p>
-          </div>
-          <span>
-            Review requests
-            <ChevronRight size={17} />
-          </span>
-        </Link>
-      )}
-      <section className="panel">
-        <div className="panel-heading">
-          <div>
-            <h2>Recent attendance activity</h2>
-            <p>
-              {employee
-                ? 'Your latest recorded shifts'
-                : 'The latest clock-ins and completed shifts'}
-            </p>
-          </div>
-          <Link className="text-link" to="/dtr">
-            View all records
-            <ArrowUpRight size={16} />
-          </Link>
-        </div>
-        {!data.activity.length ? (
-          <State empty label="No attendance recorded yet." />
-        ) : (
-          <div className="table-wrap">
-            <table>
-              <thead>
-                <tr>
-                  <th>Employee</th>
-                  <th>Attendance date</th>
-                  <th>Clock in</th>
-                  <th>Clock out</th>
-                  <th>Status</th>
-                  <th />
-                </tr>
-              </thead>
-              <tbody>
-                {data.activity.map((r: any) => (
-                  <tr key={r.id}>
-                    <td>
-                      <div className="employee-cell">
-                        <span className="mini-avatar">
-                          {r.name
-                            .split(' ')
-                            .map((s: string) => s[0])
-                            .slice(0, 2)
-                            .join('')}
-                        </span>
-                        <div>
-                          <strong>{r.name}</strong>
-                          <small>{r.employee_id}</small>
-                        </div>
-                      </div>
-                    </td>
-                    <td>{dateText(r.work_date)}</td>
-                    <td>{timeText(r.clock_in)}</td>
-                    <td>{timeText(r.clock_out, true)}</td>
-                    <td>
-                      <Badge status={r.clock_out ? 'PRESENT' : 'CLOCKED_IN'} />
-                    </td>
-                    <td>
-                      <Link className="icon-button" to="/dtr" aria-label="View daily records">
-                        <ChevronRight size={17} />
-                      </Link>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
-      </section>
-    </>
+    </div>
   );
 }
+
 function Stat({
   label,
   value,
@@ -390,10 +464,17 @@ function Stat({
     <div className="stat-card">
       <div>
         <span>{label}</span>
-        <Icon size={18} strokeWidth={1.7} />
+        <span className="kpi-icon">
+          <Icon size={17} strokeWidth={1.7} />
+        </span>
       </div>
       <strong>{value}</strong>
-      {hint && <small>{hint}</small>}
+      {hint && (
+        <small>
+          <span aria-hidden="true">—</span>
+          {hint}
+        </small>
+      )}
     </div>
   );
 }
